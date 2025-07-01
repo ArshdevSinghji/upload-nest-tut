@@ -70,6 +70,9 @@ export class PublicMulterService {
         return uploadedFile;
       } catch (error) {
         Logger.log(`Error connecting to cloudinary - retrying...`);
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
       }
     }
     throw new BadRequestException(`Failed to upload to Cloudinary`);
