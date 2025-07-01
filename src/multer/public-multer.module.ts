@@ -5,15 +5,17 @@ import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Image } from 'src/entity/image.entity';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([Image]),
     ConfigModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const destination =
-          configService.get<string>('MULTER_DEST') || './upload/file';
+        const destination = configService.get<string>('MULTER_DEST');
         return {
           storage: diskStorage({
             destination,
