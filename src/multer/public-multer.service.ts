@@ -86,4 +86,8 @@ export class PublicMulterService {
       });
     });
   }
+
+  async uploadImageToClient(file: Express.Multer.File) {
+    return this.cloudinaryService.uploadImageToClient(file);
+  }
 }
