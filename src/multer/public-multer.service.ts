@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as fs from 'fs';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
@@ -20,7 +20,6 @@ export class PublicMulterService {
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       await this.deleteFile(file.path);
-
       throw new BadRequestException('invalid file type');
     }
 
@@ -34,10 +33,9 @@ export class PublicMulterService {
 
     if (file.size > maxSize) {
       await this.deleteFile(file.path);
-
       throw new BadRequestException('file is too large!');
     } else if (file.size > 5 * 1024 * 1024) {
-      const uploadedFile = await this.cloudinaryService.uploadImage(file);
+      const uploadedFile = await this.tryAgain(file);
 
       await this.deleteFile(file.path);
 
@@ -60,6 +58,21 @@ export class PublicMulterService {
     await this.imageRepo.save(imageCreated);
 
     return { message: 'File uploaded successfully', filePath: file.path };
+  }
+
+  async tryAgain(file: Express.Multer.File, maxRetries: number = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(
+          `Attempting Cloudinary upload - Try ${attempt}/${maxRetries}`,
+        );
+        const uploadedFile = await this.cloudinaryService.uploadImage(file);
+        return uploadedFile;
+      } catch (error) {
+        Logger.log(`Error connecting to cloudinary - retrying...`);
+      }
+    }
+    throw new BadRequestException(`Failed to upload to Cloudinary`);
   }
 
   async deleteFile(path: string): Promise<void> {
