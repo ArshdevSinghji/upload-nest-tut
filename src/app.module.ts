@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { PublicMulterModule } from './multer/public-multer.module';
 import { dataSourceOptions } from './data-source';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DeleteFileModule } from './delete-file/delete-file.module';
+import { TryagainModule } from './tryagain/tryagain.module';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       },
     }),
     PublicMulterModule,
+    DeleteFileModule,
+    TryagainModule,
   ],
 })
 export class AppModule {}

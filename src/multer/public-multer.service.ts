@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as fs from 'fs';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { DeleteFileService } from 'src/delete-file/delete-file.service';
 import { Image } from 'src/entity/image.entity';
+import { TryAgainService } from 'src/tryagain/tryagain.provider';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -11,6 +12,8 @@ export class PublicMulterService {
     private cloudinaryService: CloudinaryService,
     @InjectRepository(Image)
     private imageRepo: Repository<Image>,
+    private deleteFileService: DeleteFileService,
+    private tryAgainService: TryAgainService,
   ) {}
 
   async handleFileUpload(file: Express.Multer.File) {
@@ -19,7 +22,8 @@ export class PublicMulterService {
     const allowedMimeTypes = ['image/png'];
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      await this.deleteFile(file.path);
+      await this.deleteFileService.deleteFile(file.path);
+
       throw new BadRequestException('invalid file type');
     }
 
@@ -32,16 +36,17 @@ export class PublicMulterService {
     const maxSize = 20 * 1024 * 1024; //20mb
 
     if (file.size > maxSize) {
-      await this.deleteFile(file.path);
+      await this.deleteFileService.deleteFile(file.path);
+
       throw new BadRequestException('file is too large!');
     } else if (file.size > 5 * 1024 * 1024) {
-      const uploadedFile = await this.tryAgain(file);
+      const uploadedFile = await this.tryAgainService.tryAgain(file);
 
-      await this.deleteFile(file.path);
+      await this.deleteFileService.deleteFile(file.path);
 
       const imageCreated = this.imageRepo.create({
         filename: file.originalname,
-        dir: uploadedFile.url,
+        dir: uploadedFile?.url,
       });
       await this.imageRepo.save(imageCreated);
 
@@ -58,33 +63,6 @@ export class PublicMulterService {
     await this.imageRepo.save(imageCreated);
 
     return { message: 'File uploaded successfully', filePath: file.path };
-  }
-
-  async tryAgain(file: Express.Multer.File, maxRetries: number = 3) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(
-          `Attempting Cloudinary upload - Try ${attempt}/${maxRetries}`,
-        );
-        const uploadedFile = await this.cloudinaryService.uploadImage(file);
-        return uploadedFile;
-      } catch (error) {
-        Logger.log(`Error connecting to cloudinary - retrying...`);
-        if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        }
-      }
-    }
-    throw new BadRequestException(`Failed to upload to Cloudinary`);
-  }
-
-  async deleteFile(path: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      fs.unlink(path, (err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
   }
 
   async uploadImageToClient(file: Express.Multer.File) {
