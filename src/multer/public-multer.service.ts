@@ -58,7 +58,7 @@ export class PublicMulterService {
 
     const imageCreated = this.imageRepo.create({
       filename: file.originalname,
-      dir: file.path,
+      dir: 'http://localhost:3000/' + file.path,
     });
     await this.imageRepo.save(imageCreated);
 

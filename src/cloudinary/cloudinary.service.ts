@@ -4,17 +4,17 @@ import { Readable } from 'stream';
 
 @Injectable()
 export class CloudinaryService {
-  constructor(@Inject('CLOUDINARY') private cloudinary) {}
+  constructor(@Inject('CLOUDINARY') private cloudinary: typeof v2) {}
 
   async uploadImage(file: Express.Multer.File) {
-    return await v2.uploader
+    return await this.cloudinary.uploader
       .upload(file.path, { folder: 'images' })
       .then((result) => result);
   }
 
   async uploadImageToClient(file: Express.Multer.File) {
     return new Promise((resolve, reject) => {
-      const uploadStream = v2.uploader.upload_stream(
+      const uploadStream = this.cloudinary.uploader.upload_stream(
         { folder: 'clientToCloud' },
         (err, res) => {
           if (err) return reject(err);

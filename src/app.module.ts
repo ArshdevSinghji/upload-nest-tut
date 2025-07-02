@@ -5,11 +5,17 @@ import { dataSourceOptions } from './data-source';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DeleteFileModule } from './delete-file/delete-file.module';
 import { TryagainModule } from './tryagain/tryagain.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '/upload/files'),
+      serveRoot: '/upload/files/',
     }),
     TypeOrmModule.forRootAsync({
       useFactory: async () => {
