@@ -1,9 +1,12 @@
 import {
+  Body,
   Controller,
-  FileTypeValidator,
   MaxFileSizeValidator,
   ParseFilePipe,
   Post,
+  Req,
+  Res,
+  UnauthorizedException,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -12,12 +15,16 @@ import { PublicMulterService } from './public-multer.service';
 import { diskStorage, memoryStorage } from 'multer';
 import { configDotenv } from 'dotenv';
 import { MinFileSizeValidator } from './minFileSize.validator';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 configDotenv();
 
 @Controller('upload')
 export class PublicMulterController {
-  constructor(private readonly publicMulterService: PublicMulterService) {}
+  constructor(
+    private readonly publicMulterService: PublicMulterService,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
   @Post()
   @UseInterceptors(
@@ -60,5 +67,36 @@ export class PublicMulterController {
   )
   async uploadImageToCloud(@UploadedFile() file: Express.Multer.File) {
     return this.publicMulterService.uploadImageToClient(file);
+  }
+
+  @Post('cloud-proxy-signed')
+  async uploadDirectSigned(@Req() req, @Res() res) {
+    const formData = new FormData();
+
+    if (!process.env.CLOUDINARY_API_KEY)
+      throw new UnauthorizedException(
+        'You are not authroized to access this route',
+      );
+
+    formData.append('api_key', process.env.CLOUDINARY_API_KEY);
+    formData.append('timestamp', Math.round(Date.now() / 1000).toString());
+
+    // Copy file and other data
+    for (const [key, value] of Object.entries(req.body)) {
+      formData.append(key, String(value));
+    }
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload
+
+`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    );
+
+    const result = await response.json();
+    res.json(result);
   }
 }

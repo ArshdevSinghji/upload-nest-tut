@@ -12,7 +12,7 @@ export class CloudinaryService {
       .then((result) => result);
   }
 
-  async uploadImageToClient(file: Express.Multer.File) {
+  async uploadImageToCloud(file: Express.Multer.File) {
     return new Promise((resolve, reject) => {
       const uploadStream = this.cloudinary.uploader.upload_stream(
         { folder: 'clientToCloud' },
